@@ -124,7 +124,7 @@ double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned c
 			}
 			break;
 		case INC:
-			if (index < totFrequencies) {
+			if (index < (totFrequencies - 1)) {
 				index++;			
 			}
 			break;
