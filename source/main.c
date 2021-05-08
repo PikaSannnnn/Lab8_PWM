@@ -12,8 +12,9 @@
 #include "simAVRHeader.h"
 #endif
 
-const int totFrequencies = 8;
-const double frequencies[totFrequencies] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25};
+unsigned char PWM_status = 0x00;	// flag for PWM
+const int totFrequencies = 8;		// total Frequencies
+const double frequencies[] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25};	// Array of all frequencies
 
 void set_PWM(double frequency) {
 	static double current_frequency;
@@ -36,9 +37,8 @@ void PWM_off() {
 	TCCR3B = 0x00;
 }
 
-enum SoundSM {WAIT, WAIT_PRESS, TOGGLE, DEC, INC} SOUND_STATE;
+enum SoundSM {WAIT, WAIT_TOGGLE, WAIT_DEC, WAIT_INC, TOGGLE, DEC, INC} SOUND_STATE;
 double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned char incButton) {
-	double returnFreq = 0x00;
 	static int index;
 	switch (SOUND_STATE) {
 		case WAIT:
@@ -52,12 +52,9 @@ double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned c
 				SOUND_STATE = INC;
 			}
 			break;
-		case WAIT_PRESS:
-			if (!toggleButton && !decButton && !incButton) {
+		case WAIT_TOGGLE:
+			if (!toggleButton && !decButton && !incButton) {	// all not pressed
 				SOUND_STATE = WAIT;
-			}
-			else if (toggleButton && !decButton && !incButton) {
-				SOUND_STATE = TOGGLE;
 			}
 			else if (!toggleButton && decButton && !incButton) {
 				SOUND_STATE = DEC;
@@ -66,6 +63,37 @@ double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned c
 				SOUND_STATE = INC;
 			}
 			break;
+		case WAIT_DEC:
+			if (!toggleButton && !decButton && !incButton) {	// all not pressed
+				SOUND_STATE = WAIT;
+			}
+			else if (toggleButton && !decButton && !incButton) {
+				SOUND_STATE = TOGGLE;
+			}
+			else if (!toggleButton && !decButton && incButton) {
+				SOUND_STATE = INC;
+			}
+			break;
+		case WAIT_INC:
+			if (!toggleButton && !decButton && !incButton) {	// all not pressed
+				SOUND_STATE = WAIT;
+			}
+			else if (toggleButton && !decButton && !incButton) {
+				SOUND_STATE = TOGGLE;
+			}
+			else if (!toggleButton && decButton && !incButton) {
+				SOUND_STATE = DEC;
+			}
+			break;
+		case TOGGLE:
+			SOUND_STATE = WAIT_TOGGLE;
+			break;
+		case DEC:
+			SOUND_STATE = WAIT_DEC;
+			break;
+		case INC:
+			SOUND_STATE = WAIT_INC;
+			break;
 		default:
 			SOUND_STATE = WAIT;
 			index = 0;
@@ -73,10 +101,35 @@ double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned c
 			break;	
 	}
 	switch (SOUND_STATE) {
-		
+		case WAIT:
+			break;
+		case WAIT_TOGGLE:
+			break;
+		case WAIT_DEC:
+			break;
+		case WAIT_INC:
+			break;
+		case TOGGLE:
+			if (PWM_status) {
+				PWM_off();
+			}
+			else {
+				PWM_on();
+			}
+			PWM_status = ~PWM_status;
+			break;
+		case DEC:
+			if (index > 0) {
+				index--;			
+			}
+			break;
+		case INC:
+			if (index < totFrequencies) {
+				index++;			
+			}
+			break;
 	}
-
-	return returnFreq;
+	return frequencies[index];
 }
 
 int main(void) {
