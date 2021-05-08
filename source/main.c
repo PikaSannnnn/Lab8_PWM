@@ -1,7 +1,7 @@
 /*	Author: sdong027
  *  Partner(s) Name: 
  *	Lab Section:
- *	Assignment: Lab #8  Exercise #1
+ *	Assignment: Lab #8  Exercise #2
  *	Exercise Description: [optional - include for your own benefit]
  *
  *	I acknowledge all content contained herein, excluding template or example
@@ -11,6 +11,9 @@
 #ifdef _SIMULATE_
 #include "simAVRHeader.h"
 #endif
+
+const int totFrequencies = 8;
+const double frequencies[totFrequencies] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25};
 
 void set_PWM(double frequency) {
 	static double current_frequency;
@@ -33,84 +36,44 @@ void PWM_off() {
 	TCCR3B = 0x00;
 }
 
-enum SoundSM {OFF, C, D, E} SOUND_STATE;
-double PlaySound(unsigned char A0, unsigned char A1, unsigned char A2) {
+enum SoundSM {WAIT, WAIT_PRESS, TOGGLE, DEC, INC} SOUND_STATE;
+double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned char incButton) {
 	double returnFreq = 0x00;
+	static int index;
 	switch (SOUND_STATE) {
-		case OFF:
-			if (A0 && !A1 && !A2) {
-				SOUND_STATE = C;
+		case WAIT:
+			if (toggleButton && !decButton && !incButton) {
+				SOUND_STATE = TOGGLE;
 			}
-			else if (!A0 && A1 && !A2) {
-				SOUND_STATE = D;
+			else if (!toggleButton && decButton && !incButton) {
+				SOUND_STATE = DEC;
 			}
-			else if (!A0 && !A1 && A2) {
-				SOUND_STATE = E;
-			}
-			break;
-		case C:
-			if (A0 && !A1 && !A2) {
-				SOUND_STATE = C;
-			}
-			else if (!A0 && A1 && !A2) {
-				SOUND_STATE = D;
-			}
-			else if (!A0 && !A1 && A2) {
-				SOUND_STATE = E;
-			}
-			else {
-				SOUND_STATE = OFF;
+			else if (!toggleButton && !decButton && incButton) {
+				SOUND_STATE = INC;
 			}
 			break;
-		case D:
-			if (A0 && !A1 && !A2) {
-				SOUND_STATE = C;
+		case WAIT_PRESS:
+			if (!toggleButton && !decButton && !incButton) {
+				SOUND_STATE = WAIT;
 			}
-			else if (!A0 && A1 && !A2) {
-				SOUND_STATE = D;
+			else if (toggleButton && !decButton && !incButton) {
+				SOUND_STATE = TOGGLE;
 			}
-			else if (!A0 && !A1 && A2) {
-				SOUND_STATE = E;
+			else if (!toggleButton && decButton && !incButton) {
+				SOUND_STATE = DEC;
 			}
-			else {
-				SOUND_STATE = OFF;
-			}
-			break;
-		case E:
-			if (A0 && !A1 && !A2) {
-				SOUND_STATE = C;
-			}
-			else if (!A0 && A1 && !A2) {
-				SOUND_STATE = D;
-			}
-			else if (!A0 && !A1 && A2) {
-				SOUND_STATE = E;
-			}
-			else {
-				SOUND_STATE = OFF;
+			else if (!toggleButton && !decButton && incButton) {
+				SOUND_STATE = INC;
 			}
 			break;
 		default:
-			SOUND_STATE = OFF;
+			SOUND_STATE = WAIT;
+			index = 0;
+			PWM_off();
 			break;	
 	}
 	switch (SOUND_STATE) {
-		case OFF:
-			PWM_off();
-			returnFreq = 0.00;
-			break;
-		case C:
-			PWM_on();
-			returnFreq = 261.63;
-			break;
-		case D:
-			PWM_on();
-			returnFreq = 293.66;
-			break;
-		case E:
-			PWM_on();
-			returnFreq = 329.63;
-			break;
+		
 	}
 
 	return returnFreq;
@@ -122,7 +85,6 @@ int main(void) {
 	DDRB = 0xFF; PORTB = 0x00;
 	unsigned char input = 0x00;
 	double inFreq = 0x00;
-	
 	
 	/* Insert your solution below */
 	while (1) {
