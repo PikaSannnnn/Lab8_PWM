@@ -1,20 +1,52 @@
 /*	Author: sdong027
  *  Partner(s) Name: 
  *	Lab Section:
- *	Assignment: Lab #8  Exercise #2
- *	Exercise Description: [optional - include for your own benefit]
+ *	Assignment: Lab #8  Exercise #3
+ *	Exercise Description: Source for sheet music: https://musescore.com/punctuationless/never-gonna-give-you-up
  *
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  */
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #ifdef _SIMULATE_
 #include "simAVRHeader.h"
 #endif
 
-unsigned char PWM_status = 0x00;	// flag for PWM
-const int totFrequencies = 8;		// total Frequencies
-const double frequencies[] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25};	// Array of all frequencies
+volatile unsigned char TimerFlag = 0;
+unsigned long _avr_timer_M = 1;
+unsigned long _avr_timer_cntcurr = 0;
+
+// Melody Arrays
+const int totNotes = 16;		// total Frequencies
+const double melody[] = {349.23, 392.00, 261.63, 392.00, 440.00, 523.25, 493.88, 440.00, 349.23, 392.00, 261.63, 261.63, 261.63, 293.66, 329.63, 349.23};
+const double noteTime[] = {325, 625, 275, 325, 425, 175, 175, 225, 325, 625, 525, 175, 175, 175, 225, 225}	// total = 5000ms, max = 5000ms
+
+void TimerSet(unsigned long M) {
+	_avr_timer_M = M;
+	_avr_timer_cntcurr = _avr_timer_M;
+}
+void TimerOn() {
+	TCCR1B = 0x0B;
+	OCR1A = 125;
+	TIMSK1 = 0x02;
+	TCNT1 = 0;
+	_avr_timer_cntcurr = _avr_timer_M;
+	SREG |= 0x80;
+}
+void TimerOff() {
+	TCCR1B = 0x00;
+}
+void TimerISR() {
+	TimerFlag = 1;
+}
+ISR(TIMER1_COMPA_vect) {
+	_avr_timer_cntcurr--;
+	if (_avr_timer_cntcurr == 0) {
+		TimerISR();
+		_avr_timer_cntcurr = _avr_timer_M;
+	}
+}
 
 void set_PWM(double frequency) {
 	static double current_frequency;
@@ -37,22 +69,15 @@ void PWM_off() {
 	TCCR3B = 0x00;
 }
 
-enum SoundSM {WAIT, WAIT_PRESS, TOGGLE, DEC, INC} SOUND_STATE;
+enum SoundSM {WAIT, PLAY, DEC, INC} SOUND_STATE;
 double PlaySound(unsigned char input) {
 	static int index;
 	static unsigned char prevInput;
 	switch (SOUND_STATE) {
 		case WAIT:
-			if (input == 0x01) {
+			if (input) {
 				SOUND_STATE = TOGGLE;
 			}
-			else if (input == 0x02) {
-				SOUND_STATE = DEC;
-			}
-			else if (input == 0x04) {
-				SOUND_STATE = INC;
-			}
-			prevInput = input;
 			break;
 		case WAIT_PRESS:
 			if (prevInput == input) {	// same input
@@ -86,7 +111,6 @@ double PlaySound(unsigned char input) {
 			break;
 		default:
 			SOUND_STATE = WAIT;
-			prevInput = 0x00;
 			index = 0;
 			PWM_off();
 			break;	
