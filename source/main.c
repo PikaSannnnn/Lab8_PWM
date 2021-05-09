@@ -37,65 +37,56 @@ void PWM_off() {
 	TCCR3B = 0x00;
 }
 
-enum SoundSM {WAIT, WAIT_TOGGLE, WAIT_DEC, WAIT_INC, TOGGLE, DEC, INC} SOUND_STATE;
-double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned char incButton) {
+enum SoundSM {WAIT, WAIT_PRESS, TOGGLE, DEC, INC} SOUND_STATE;
+double PlaySound(unsigned char input) {
 	static int index;
+	static unsigned char prevInput;
 	switch (SOUND_STATE) {
 		case WAIT:
-			if (toggleButton && !decButton && !incButton) {
+			if (input == 0x01) {
 				SOUND_STATE = TOGGLE;
 			}
-			else if (!toggleButton && decButton && !incButton) {
+			else if (input == 0x02) {
 				SOUND_STATE = DEC;
 			}
-			else if (!toggleButton && !decButton && incButton) {
+			else if (input == 0x04) {
 				SOUND_STATE = INC;
 			}
+			prevInput = input;
 			break;
-		case WAIT_TOGGLE:
-			if (!toggleButton && !decButton && !incButton) {	// all not pressed
-				SOUND_STATE = WAIT;
+		case WAIT_PRESS:
+			if (prevInput == input) {	// same input
+				SOUND_STATE = WAIT_PRESS;
 			}
-			else if (!toggleButton && decButton && !incButton) {
-				SOUND_STATE = DEC;
+			else {				// not same input (change to different state)
+				if (input == 0x00) {	// all not pressed
+					SOUND_STATE = WAIT;
+				}
+				else if (input == 0x01) {
+					SOUND_STATE = TOGGLE;
+				}
+				else if (input == 0x02) {
+					SOUND_STATE = DEC;
+				}
+				else if (input == 0x04) {
+					SOUND_STATE = INC;
+				}
+				// multiple buttons pressed -> nothing
 			}
-			else if (!toggleButton && !decButton && incButton) {
-				SOUND_STATE = INC;
-			}
-			break;
-		case WAIT_DEC:
-			if (!toggleButton && !decButton && !incButton) {	// all not pressed
-				SOUND_STATE = WAIT;
-			}
-			else if (toggleButton && !decButton && !incButton) {
-				SOUND_STATE = TOGGLE;
-			}
-			else if (!toggleButton && !decButton && incButton) {
-				SOUND_STATE = INC;
-			}
-			break;
-		case WAIT_INC:
-			if (!toggleButton && !decButton && !incButton) {	// all not pressed
-				SOUND_STATE = WAIT;
-			}
-			else if (toggleButton && !decButton && !incButton) {
-				SOUND_STATE = TOGGLE;
-			}
-			else if (!toggleButton && decButton && !incButton) {
-				SOUND_STATE = DEC;
-			}
+			prevInput = input;
 			break;
 		case TOGGLE:
-			SOUND_STATE = WAIT_TOGGLE;
+			SOUND_STATE = WAIT_PRESS;
 			break;
 		case DEC:
-			SOUND_STATE = WAIT_DEC;
+			SOUND_STATE = WAIT_PRESS;
 			break;
 		case INC:
-			SOUND_STATE = WAIT_INC;
+			SOUND_STATE = WAIT_PRESS;
 			break;
 		default:
 			SOUND_STATE = WAIT;
+			prevInput = 0x00;
 			index = 0;
 			PWM_off();
 			break;	
@@ -103,11 +94,7 @@ double PlaySound(unsigned char toggleButton, unsigned char decButton, unsigned c
 	switch (SOUND_STATE) {
 		case WAIT:
 			break;
-		case WAIT_TOGGLE:
-			break;
-		case WAIT_DEC:
-			break;
-		case WAIT_INC:
+		case WAIT_PRESS:
 			break;
 		case TOGGLE:
 			if (PWM_status) {
@@ -142,7 +129,7 @@ int main(void) {
 	/* Insert your solution below */
 	while (1) {
 		input = ~PINA & 0x07;
-		inFreq = PlaySound((input & 0x01), (input & 0x02), (input & 0x04));	// 0001, 0010, 0100
+		inFreq = PlaySound(input);	// 0001, 0010, 0100
 		set_PWM(inFreq);
 	}
 	return 1;
