@@ -2,7 +2,9 @@
  *  Partner(s) Name: 
  *	Lab Section:
  *	Assignment: Lab #8  Exercise #3
- *	Exercise Description: 
+ *	Exercise Description: Sound component is a little faulty: There are random inconsistent scratches here and there (uncontrollable). 
+ *						  Demo is the one with least amount of scratches I was able to record.
+ *	Link to Demo: https://www.youtube.com/watch?v=Z4PzYR-OYXg
  *
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
